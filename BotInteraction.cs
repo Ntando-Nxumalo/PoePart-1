@@ -24,23 +24,24 @@ class BotInteraction
         ArrayList more = new ArrayList();
 
         // Adding topics to ArrayLists
-        phishing.Add("Phishing is a type of cyber attack where attackers pretend to be someone else to steal personal information.");
-        phishing.Add("You can recognize phishing emails by checking for spelling errors, suspicious links, and unexpected attachments.");
-        phishing.Add("To defend against phishing, never click on unknown links and always verify the sender’s email address.");
+        phishing.Add("Phishing attacks trick users into revealing sensitive information by impersonating trusted entities.");
+        phishing.Add("Look out for urgent language, unfamiliar senders, and requests for sensitive details in emails.");
+        phishing.Add("Always verify links by hovering over them and never enter login credentials on suspicious websites.");
 
-        passwords.Add("A strong password should be at least 12-16 characters long.");
-        passwords.Add("It should include uppercase, lowercase, numbers, and special symbols.");
-        passwords.Add("Avoid using personal information like your birthdate.");
-        passwords.Add("Use a password manager to generate and store complex passwords.");
+        passwords.Add("Create passwords that are at least 14 characters long for better security.");
+        passwords.Add("Use a mix of uppercase and lowercase letters, numbers, and special characters to strengthen passwords.");
+        passwords.Add("Avoid reusing passwords across multiple accounts to prevent credential leaks.");
+        passwords.Add("Consider using passphrases, which are longer and easier to remember than random passwords.");
 
-        security.Add("Online security involves keeping your devices, accounts, and personal data safe from cyber threats.");
-        security.Add("Enable two-factor authentication (2FA) for extra security.");
-        security.Add("Keep your software and operating system updated to fix vulnerabilities.");
-        security.Add("Use unique passwords for different accounts.");
+        security.Add("Cybersecurity is about protecting your digital identity, data, and devices from malicious threats.");
+        security.Add("Enable multi-factor authentication (MFA) to add an extra layer of security.");
+        security.Add("Regularly update your software and security patches to guard against new threats.");
+        security.Add("Use a combination of strong passwords and biometric authentication where possible.");
 
-        more.Add("Always use a secure internet connection, avoid using public Wi-Fi for sensitive transactions.");
-        more.Add("Be careful with social media; never share too much personal information online.");
-        more.Add("Regularly back up important data to avoid data loss in case of cyber attacks.");
+        more.Add("Enable multi-factor authentication (MFA) on all important accounts for added security.");
+        more.Add("Use a password manager to generate and store strong, unique passwords for different accounts.");
+        more.Add("Keep your operating system, software, and antivirus programs updated to protect against vulnerabilities.");
+
 
         while (true)
         {
