@@ -49,7 +49,7 @@ Template:Console App C# .NET Framework 4.0.8
    - Users can exit the application by typing:
      - `exit`
 
-
+and added a screenshot of my file structure and code
 ---
 
 ## Author
