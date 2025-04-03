@@ -9,44 +9,22 @@ internal class WelcomeMessage
     {
         try
         {
-            // Get the full location of the project
-            string full_location = AppDomain.CurrentDomain.BaseDirectory;
-
-            // Replace "bin\Debug" in the full location
-            string new_path = full_location.Replace("bin\\Debug", "").Replace("bin\\Release", "");
-
-            // Append the WAV file name
-            string filePath = Path.Combine(new_path, "Greetings.wav");
-
-            // Debugging Output: Print file path
-            Console.WriteLine($"Checking for file at: {filePath}");
-
-            // Check if file exists
-            if (!File.Exists(filePath))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Error: Audio file not found.");
-                Console.ResetColor();
-                return;
-            }
-
+            string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory.Replace("bin\\Debug", "").Replace("bin\\Release", ""), "Assets", "Greeting.wav");
             using (SoundPlayer player = new SoundPlayer(filePath))
             {
                 player.Load();
-                player.Play();
+                player.PlaySync();
+                Console.WriteLine("WAV file played successfully.");
             }
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Playing sound successfully.");
-            Console.ResetColor();
         }
-        catch (Exception error)
+        catch (Exception ex)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"Error: {error.Message}");
+            Console.WriteLine($"Error reading WAV file: {ex.Message}");
             Console.ResetColor();
         }
     }
+
 }
 
 class Program
