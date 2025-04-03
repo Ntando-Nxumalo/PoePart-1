@@ -70,7 +70,7 @@ class BotInteraction
         if (input.Contains("how are you"))
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"I'm doing great, thank you for asking, {username}! 😊 How about you? Stay safe online!");
+            Console.WriteLine($"I'm doing great, thank you for asking, {username}! How about you? Stay safe online!");
             Console.ResetColor();
         }
         else if (input.Contains("what's your purpose") || input.Contains("what is your purpose"))
