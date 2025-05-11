@@ -1,20 +1,107 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 class BotInteraction
 {
-    static string username = "";
-    static string currentTopic = "";
-    static bool inConversation = false;
-    static Random random = new Random();
-    static Dictionary<string, string> userPreferences = new Dictionary<string, string>();
-    static List<string> discussedTopics = new List<string>();
+    private static string username = "";
+    private static string currentTopic = "";
+    private static bool inConversation = false;
+    private static readonly Random random = new Random();
+
+    // User preferences and history
+    private static readonly Dictionary<string, string> userPreferences = new Dictionary<string, string>();
+    private static readonly List<string> discussedTopics = new List<string>();
+
+    private static readonly Dictionary<string, List<string>> responseLibrary = new Dictionary<string, List<string>>()
+    {
+        {"phishing", new List<string>
+            {
+                "Phishing attacks trick users into revealing sensitive information by impersonating trusted entities.",
+                "Look out for urgent language, unfamiliar senders, and requests for sensitive details in emails.",
+                "Always verify links by hovering over them and never enter login credentials on suspicious websites.",
+                "Be cautious of emails asking for personal information. Scammers often disguise themselves as trusted organisations.",
+                "Check the sender's email address carefully - phishing emails often use addresses that look similar to legitimate ones."
+            }
+        },
+        {"passwords", new List<string>
+            {
+                "Create passwords that are at least 14 characters long for better security.",
+                "Use a mix of uppercase and lowercase letters, numbers, and special characters to strengthen passwords.",
+                "Avoid reusing passwords across multiple accounts to prevent credential leaks.",
+                "Consider using passphrases, which are longer and easier to remember than random passwords.",
+                "Make sure to use strong, unique passwords for each account. Avoid using personal details in your passwords."
+            }
+        },
+        {"security", new List<string>
+            {
+                "Cybersecurity is about protecting your digital identity, data, and devices from malicious threats.",
+                "Enable multi-factor authentication (MFA) to add an extra layer of security.",
+                "Regularly update your software and security patches to guard against new threats.",
+                "Use a combination of strong passwords and biometric authentication where possible.",
+                "Be wary of public Wi-Fi networks. Use a VPN when accessing sensitive information on public networks."
+            }
+        },
+        {"scams", new List<string>
+            {
+                "Scams often try to create a sense of urgency to make you act without thinking.",
+                "If an offer seems too good to be true, it probably is. Be skeptical of unexpected prizes or winnings.",
+                "Never give out personal or financial information to someone who contacts you unexpectedly.",
+                "Tech support scams often call claiming your computer has a virus. Legitimate companies don't operate this way.",
+                "Romance scams target people on dating sites, often asking for money for emergencies or travel expenses."
+            }
+        },
+        {"privacy", new List<string>
+            {
+                "Protect your privacy by reviewing app permissions and only granting access to what's necessary.",
+                "Use privacy-focused browsers and search engines to minimize tracking of your online activities.",
+                "Regularly check your social media privacy settings to control who can see your information.",
+                "Be cautious about what personal information you share online - once it's out there, it's hard to take back.",
+                "Consider using encrypted messaging apps for sensitive communications to protect your privacy."
+            }
+        },
+        {"general", new List<string>
+            {
+                "Enable multi-factor authentication (MFA) on all important accounts for added security.",
+                "Use a password manager to generate and store strong, unique passwords for different accounts.",
+                "Keep your operating system, software, and antivirus programs updated to protect against vulnerabilities.",
+                "Backup your important data regularly to protect against ransomware attacks.",
+                "Be careful what you share on social media - attackers can use personal information to guess passwords or answers to security questions."
+            }
+        }
+    };
+
+    // Keyword mapping to topics
+    private static readonly Dictionary<string, string> keywordToTopic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        {"password", "passwords"},
+        {"passwords", "passwords"},
+        {"strong password", "passwords"},
+        {"phishing", "phishing"},
+        {"phish", "phishing"},
+        {"scam", "scams"},
+        {"scams", "scams"},
+        {"fraud", "scams"},
+        {"privacy", "privacy"},
+        {"private", "privacy"},
+        {"data protection", "privacy"},
+        {"security", "security"},
+        {"cyber", "security"},
+        {"safe browsing", "security"}
+    };
+
+    // Sentiment analysis words
+    private static readonly string[] positiveWords = { "great", "good", "awesome", "happy", "thanks", "thank you", "cool", "excellent", "love", "like" };
+    private static readonly string[] negativeWords = { "bad", "sad", "angry", "frustrated", "worried", "scared", "afraid", "hate", "annoyed" };
 
     public static void Start()
     {
-        // Ask for user name first
+        InitializeConversation();
+        MainConversationLoop();
+    }
+
+    private static void InitializeConversation()
+    {
         Console.ForegroundColor = ConsoleColor.Green;
         Console.Write("Enter your name: ");
         Console.ResetColor();
@@ -23,174 +110,85 @@ class BotInteraction
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine($"\nHello, {username}! Welcome to Cyber Security Bot.\n");
         Console.ResetColor();
+    }
 
-        // Initialize ArrayList for responses
-        ArrayList phishing = new ArrayList();
-        ArrayList passwords = new ArrayList();
-        ArrayList security = new ArrayList();
-        ArrayList more = new ArrayList();
-        ArrayList scams = new ArrayList();
-        ArrayList privacy = new ArrayList();
-
-        // Adding topics to ArrayLists with multiple responses for variety
-        phishing.Add("Phishing attacks trick users into revealing sensitive information by impersonating trusted entities.");
-        phishing.Add("Look out for urgent language, unfamiliar senders, and requests for sensitive details in emails.");
-        phishing.Add("Always verify links by hovering over them and never enter login credentials on suspicious websites.");
-        phishing.Add("Be cautious of emails asking for personal information. Scammers often disguise themselves as trusted organisations.");
-        phishing.Add("Check the sender's email address carefully - phishing emails often use addresses that look similar to legitimate ones.");
-
-        passwords.Add("Create passwords that are at least 14 characters long for better security.");
-        passwords.Add("Use a mix of uppercase and lowercase letters, numbers, and special characters to strengthen passwords.");
-        passwords.Add("Avoid reusing passwords across multiple accounts to prevent credential leaks.");
-        passwords.Add("Consider using passphrases, which are longer and easier to remember than random passwords.");
-        passwords.Add("Make sure to use strong, unique passwords for each account. Avoid using personal details in your passwords.");
-
-        security.Add("Cybersecurity is about protecting your digital identity, data, and devices from malicious threats.");
-        security.Add("Enable multi-factor authentication (MFA) to add an extra layer of security.");
-        security.Add("Regularly update your software and security patches to guard against new threats.");
-        security.Add("Use a combination of strong passwords and biometric authentication where possible.");
-        security.Add("Be wary of public Wi-Fi networks. Use a VPN when accessing sensitive information on public networks.");
-
-        more.Add("Enable multi-factor authentication (MFA) on all important accounts for added security.");
-        more.Add("Use a password manager to generate and store strong, unique passwords for different accounts.");
-        more.Add("Keep your operating system, software, and antivirus programs updated to protect against vulnerabilities.");
-        more.Add("Backup your important data regularly to protect against ransomware attacks.");
-        more.Add("Be careful what you share on social media - attackers can use personal information to guess passwords or answers to security questions.");
-
-        scams.Add("Scams often try to create a sense of urgency to make you act without thinking.");
-        scams.Add("If an offer seems too good to be true, it probably is. Be skeptical of unexpected prizes or winnings.");
-        scams.Add("Never give out personal or financial information to someone who contacts you unexpectedly.");
-        scams.Add("Tech support scams often call claiming your computer has a virus. Legitimate companies don't operate this way.");
-        scams.Add("Romance scams target people on dating sites, often asking for money for emergencies or travel expenses.");
-
-        privacy.Add("Protect your privacy by reviewing app permissions and only granting access to what's necessary.");
-        privacy.Add("Use privacy-focused browsers and search engines to minimize tracking of your online activities.");
-        privacy.Add("Regularly check your social media privacy settings to control who can see your information.");
-        privacy.Add("Be cautious about what personal information you share online - once it's out there, it's hard to take back.");
-        privacy.Add("Consider using encrypted messaging apps for sensitive communications to protect your privacy.");
-
+    private static void MainConversationLoop()
+    {
         while (true)
         {
             try
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                if (!inConversation)
-                {
-                    Console.WriteLine("What would you like to ask me about cybersecurity?");
-                    Console.WriteLine("You can ask about: passwords, phishing, scams, privacy, or general security.");
-                }
-                else
-                {
-                    Console.WriteLine($"What else would you like to know about {currentTopic}?");
-                    Console.WriteLine("(Or ask about a new topic, or type 'exit' to quit)");
-                }
-                Console.ResetColor();
-
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write($"{username}: ");
-                Console.ResetColor();
-
-                string input = Console.ReadLine()?.Trim().ToLower();
-                Console.WriteLine();
+                DisplayPrompt();
+                string input = GetUserInput();
 
                 if (string.IsNullOrWhiteSpace(input))
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("I didn't hear anything. Could you repeat that?");
-                    Console.ResetColor();
+                    HandleEmptyInput();
                     continue;
                 }
 
-                if (input == "exit")
+                if (input.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 {
                     DisplayExitMessage();
                     break;
                 }
 
-                // Analyze sentiment and emotion before processing input
                 var sentimentAnalysis = AnalyzeSentiment(input);
-                ProcessInput(input, phishing, passwords, security, more, scams, privacy, sentimentAnalysis);
+                ProcessInput(input, sentimentAnalysis);
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Oops! Something went wrong: {ex.Message}");
-                Console.WriteLine("Let's try that again.");
-                Console.ResetColor();
+                HandleError(ex);
             }
         }
     }
 
-    static void ProcessInput(string input, ArrayList phishing, ArrayList passwords, ArrayList security,
-                            ArrayList more, ArrayList scams, ArrayList privacy, (string sentiment, string emotion) sentimentAnalysis)
+    private static void DisplayPrompt()
     {
-        // Check for interest statements first
-        if (input.Contains("i'm interested in") || input.Contains("i am interested in") ||
-            input.Contains("i like") || input.Contains("i love") || input.Contains("i enjoy"))
+        Console.ForegroundColor = ConsoleColor.Green;
+        if (!inConversation)
         {
-            ProcessInterestStatement(input);
-            return;
+            Console.WriteLine("What would you like to ask me about cybersecurity?");
+            Console.WriteLine("You can ask about: passwords, phishing, scams, privacy, or general security.");
         }
+        else
+        {
+            Console.WriteLine($"What else would you like to know about {currentTopic}?");
+            Console.WriteLine("(Or ask about a new topic, or type 'exit' to quit)");
+        }
+        Console.ResetColor();
+    }
 
-        // Keyword recognition with priority
-        if (input.Contains("password") || input.Contains("passwords") || input.Contains("strong password"))
+    private static string GetUserInput()
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Write($"{username}: ");
+        Console.ResetColor();
+
+        string input = Console.ReadLine()?.Trim();
+        Console.WriteLine();
+        return input?.ToLower() ?? "";
+    }
+
+    private static void HandleEmptyInput()
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("I didn't hear anything. Could you repeat that?");
+        Console.ResetColor();
+    }
+
+    private static void ProcessInput(string input, (string sentiment, string emotion) sentimentAnalysis)
+    {
+        if (ProcessInterestStatement(input)) return;
+        if (ProcessSpecialCommands(input)) return;
+
+        string detectedTopic = DetectTopic(input);
+        if (!string.IsNullOrEmpty(detectedTopic))
         {
-            currentTopic = "password safety";
+            currentTopic = detectedTopic;
             inConversation = true;
             if (!discussedTopics.Contains(currentTopic)) discussedTopics.Add(currentTopic);
-            DisplayRandomResponse(passwords, sentimentAnalysis);
-        }
-        else if (input.Contains("phishing") || input.Contains("phish"))
-        {
-            currentTopic = "phishing";
-            inConversation = true;
-            if (!discussedTopics.Contains(currentTopic)) discussedTopics.Add(currentTopic);
-            DisplayRandomResponse(phishing, sentimentAnalysis);
-        }
-        else if (input.Contains("scam") || input.Contains("scams") || input.Contains("fraud"))
-        {
-            currentTopic = "scams";
-            inConversation = true;
-            if (!discussedTopics.Contains(currentTopic)) discussedTopics.Add(currentTopic);
-            DisplayRandomResponse(scams, sentimentAnalysis);
-        }
-        else if (input.Contains("privacy") || input.Contains("private") || input.Contains("data protection"))
-        {
-            currentTopic = "privacy";
-            inConversation = true;
-            if (!discussedTopics.Contains(currentTopic)) discussedTopics.Add(currentTopic);
-            DisplayRandomResponse(privacy, sentimentAnalysis);
-        }
-        else if (input.Contains("security") || input.Contains("cyber") || input.Contains("safe browsing"))
-        {
-            currentTopic = "security";
-            inConversation = true;
-            if (!discussedTopics.Contains(currentTopic)) discussedTopics.Add(currentTopic);
-            DisplayRandomResponse(security, sentimentAnalysis);
-        }
-        else if (input.Contains("how are you"))
-        {
-            RespondToHowAreYou(sentimentAnalysis);
-        }
-        else if (input.Contains("what's your purpose") || input.Contains("what is your purpose"))
-        {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("My purpose is to assist you with cybersecurity knowledge and keep you safe online. I can help with topics like password safety, phishing prevention, scam awareness, privacy protection, and general security tips.");
-            Console.ResetColor();
-        }
-        else if (input.Contains("what can i ask you about") || input.Contains("what can I ask you about"))
-        {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("You can ask me about:\n- Password safety\n- Phishing prevention\n- Scam awareness\n- Privacy protection\n- General security tips\n- Safe browsing practices");
-            Console.ResetColor();
-        }
-        else if (input.Contains("more") || input.Contains("another tip") || input.Contains("tell me more"))
-        {
-            HandleMoreRequest(more, sentimentAnalysis);
-        }
-        else if (input.Contains("remember") || input.Contains("recall"))
-        {
-            RecallUserPreferences();
+            DisplayRandomResponse(currentTopic, sentimentAnalysis);
         }
         else
         {
@@ -198,48 +196,106 @@ class BotInteraction
         }
     }
 
-    static void ProcessInterestStatement(string input)
+    private static bool ProcessInterestStatement(string input)
     {
-        string topic = "";
-        if (input.Contains("password") || input.Contains("security"))
+        if (!input.Contains("i'm interested in") &&
+            !input.Contains("i am interested in") &&
+            !input.Contains("i like") &&
+            !input.Contains("i love") &&
+            !input.Contains("i enjoy"))
         {
-            topic = "password safety";
-        }
-        else if (input.Contains("phishing"))
-        {
-            topic = "phishing";
-        }
-        else if (input.Contains("scam") || input.Contains("fraud"))
-        {
-            topic = "scams";
-        }
-        else if (input.Contains("privacy"))
-        {
-            topic = "privacy";
-        }
-        else if (input.Contains("security") || input.Contains("cyber"))
-        {
-            topic = "security";
+            return false;
         }
 
-        if (!string.IsNullOrEmpty(topic))
+        string detectedTopic = DetectTopic(input);
+        if (!string.IsNullOrEmpty(detectedTopic))
         {
-            userPreferences["favoriteTopic"] = topic;
+            userPreferences["favoriteTopic"] = detectedTopic;
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"Great! I'll remember that you're interested in {topic}. It's a crucial part of staying safe online.");
+            Console.WriteLine($"Great! I'll remember that you're interested in {detectedTopic}. It's a crucial part of staying safe online.");
             Console.ResetColor();
-            currentTopic = topic;
+            currentTopic = detectedTopic;
             inConversation = true;
         }
-        else
-        {
+
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("That sounds interesting! Could you tell me more about which cybersecurity topic you're interested in?");
             Console.ResetColor();
-        }
+        return true;
     }
 
-    static void RespondToHowAreYou((string sentiment, string emotion) sentimentAnalysis)
+    private static bool ProcessSpecialCommands(string input)
+    {
+        if (input.Contains("how are you"))
+        {
+            RespondToHowAreYou(AnalyzeSentiment(input));
+            return true;
+        }
+        if (input.Contains("what's your purpose") || input.Contains("what is your purpose"))
+        {
+            DisplayPurpose();
+            return true;
+        }
+        if (input.Contains("what can i ask you about") || input.Contains("what can I ask you about"))
+        {
+            DisplayAvailableTopics();
+            return true;
+        }
+        }
+        }
+        return false;
+    }
+
+    private static string DetectTopic(string input)
+    {
+        foreach (var kvp in keywordToTopic)
+        {
+            if (input.Contains(kvp.Key))
+            {
+                return kvp.Value;
+            }
+        }
+        return null;
+    }
+
+    private static void DisplayRandomResponse(string topic, (string sentiment, string emotion) sentimentAnalysis)
+    {
+        if (!responseLibrary.ContainsKey(topic) || responseLibrary[topic].Count == 0) return;
+
+        string response = responseLibrary[topic][random.Next(responseLibrary[topic].Count)];
+        response = AdjustResponseBySentiment(response, sentimentAnalysis);
+
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine(response);
+        Console.ResetColor();
+        Console.WriteLine();
+    }
+
+    private static string AdjustResponseBySentiment(string response, (string sentiment, string emotion) sentimentAnalysis)
+    {
+        if (sentimentAnalysis.sentiment == "positive")
+        {
+            response += " Great to see you're interested in staying safe!";
+        }
+        else if (sentimentAnalysis.sentiment == "negative")
+        {
+            if (sentimentAnalysis.emotion == "worried")
+            {
+                response = "I understand this can be worrying. " + response + " The important thing is to take it step by step.";
+            }
+            else if (sentimentAnalysis.emotion == "frustrated")
+            {
+                response = "I know this can be frustrating. " + response + " Let's break it down to make it easier.";
+            }
+            else
+            {
+                response = "I understand cybersecurity can be concerning. " + response + " Let me know if you'd like more help with this.";
+            }
+        }
+        return response;
+    }
+
+    private static void RespondToHowAreYou((string sentiment, string emotion) sentimentAnalysis)
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
         if (sentimentAnalysis.sentiment == "positive")
@@ -268,13 +324,26 @@ class BotInteraction
         Console.ResetColor();
     }
 
-    static void HandleMoreRequest(ArrayList more, (string sentiment, string emotion) sentimentAnalysis)
+    private static void DisplayPurpose()
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("My purpose is to assist you with cybersecurity knowledge and keep you safe online. I can help with topics like password safety, phishing prevention, scam awareness, privacy protection, and general security tips.");
+        Console.ResetColor();
+    }
+
+    private static void DisplayAvailableTopics()
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("You can ask me about:\n- Password safety\n- Phishing prevention\n- Scam awareness\n- Privacy protection\n- General security tips\n- Safe browsing practices");
+        Console.ResetColor();
+    }
+
+    private static void HandleMoreRequest((string sentiment, string emotion) sentimentAnalysis)
     {
         if (!string.IsNullOrEmpty(currentTopic))
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
 
-            // Personalize response if we know user's favorite topic
             if (userPreferences.ContainsKey("favoriteTopic") && userPreferences["favoriteTopic"] == currentTopic)
             {
                 Console.WriteLine($"Here's another tip about {currentTopic}, since you're particularly interested in this:");
@@ -289,37 +358,9 @@ class BotInteraction
             }
 
             Console.ResetColor();
-
-            // Display another random response about the current topic
-            switch (currentTopic)
-            {
-                case "password safety":
-                    DisplayRandomResponse(passwords, sentimentAnalysis);
-                    break;
-                case "phishing":
-                    DisplayRandomResponse(phishing, sentimentAnalysis);
-                    break;
-                case "scams":
-                    DisplayRandomResponse(scams, sentimentAnalysis);
-                    break;
-                case "privacy":
-                    DisplayRandomResponse(privacy, sentimentAnalysis);
-                    break;
-                case "security":
-                    DisplayRandomResponse(security, sentimentAnalysis);
-                    break;
-                default:
-                    DisplayRandomResponse(more, sentimentAnalysis);
-                    break;
-            }
-        }
-        else
-        {
-            DisplayRandomResponse(more, sentimentAnalysis);
-        }
     }
 
-    static void RecallUserPreferences()
+    private static void RecallUserPreferences()
     {
         if (userPreferences.Count == 0)
         {
@@ -345,7 +386,7 @@ class BotInteraction
         }
     }
 
-    static void HandleUnknownInput()
+    private static void HandleUnknownInput()
     {
         Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine("I didn't quite understand that. Could you rephrase or ask about a cybersecurity topic?");
@@ -355,53 +396,8 @@ class BotInteraction
         currentTopic = "";
     }
 
-    static void DisplayRandomResponse(ArrayList responseList, (string sentiment, string emotion) sentimentAnalysis)
+    private static (string sentiment, string emotion) AnalyzeSentiment(string input)
     {
-        if (responseList.Count == 0) return;
-
-        // Get a random response
-        int index = random.Next(responseList.Count);
-        string response = responseList[index].ToString();
-
-        // Adjust response based on sentiment and emotion
-        if (sentimentAnalysis.sentiment == "positive")
-        {
-            response += " Great to see you're interested in staying safe!";
-        }
-        else if (sentimentAnalysis.sentiment == "negative")
-        {
-            if (sentimentAnalysis.emotion == "worried")
-            {
-                response = "I understand this can be worrying. " + response + " The important thing is to take it step by step.";
-            }
-            else if (sentimentAnalysis.emotion == "frustrated")
-            {
-                response = "I know this can be frustrating. " + response + " Let's break it down to make it easier.";
-            }
-            else
-            {
-                response = "I understand cybersecurity can be concerning. " + response + " Let me know if you'd like more help with this.";
-            }
-        }
-
-        // Personalize response if we know user's favorite topic
-        if (userPreferences.ContainsKey("favoriteTopic") && currentTopic == userPreferences["favoriteTopic"])
-        {
-            response += $" Since you're particularly interested in {currentTopic}, this is especially important for you.";
-        }
-
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine(response);
-        Console.ResetColor();
-        Console.WriteLine();  // Add an extra newline for better readability
-    }
-
-    static (string sentiment, string emotion) AnalyzeSentiment(string input)
-    {
-        // Simple sentiment analysis based on keywords
-        string[] positiveWords = { "great", "good", "awesome", "happy", "thanks", "thank you", "cool", "excellent", "love", "like" };
-        string[] negativeWords = { "bad", "sad", "angry", "frustrated", "worried", "scared", "afraid", "hate", "annoyed" };
-
         string sentiment = "neutral";
         string emotion = "";
 
@@ -413,7 +409,6 @@ class BotInteraction
         {
             sentiment = "negative";
 
-            // Detect specific emotions
             if (input.Contains("worried") || input.Contains("scared") || input.Contains("afraid"))
             {
                 emotion = "worried";
@@ -427,7 +422,7 @@ class BotInteraction
         return (sentiment, emotion);
     }
 
-    static void DisplayExitMessage()
+    private static void DisplayExitMessage()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
         Console.WriteLine($"Goodbye, {username}! Remember to stay safe online.");
@@ -442,6 +437,14 @@ class BotInteraction
             Console.WriteLine($"We discussed these topics today: {string.Join(", ", discussedTopics)}.");
         }
 
+        Console.ResetColor();
+    }
+
+    private static void HandleError(Exception ex)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Oops! Something went wrong: {ex.Message}");
+        Console.WriteLine("Let's try that again.");
         Console.ResetColor();
     }
 }
