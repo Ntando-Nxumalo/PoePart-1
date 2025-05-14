@@ -153,6 +153,26 @@ Ntando:> I keep hearing about maleware
 Bot: I notice you often ask about security threats, Ntando. Did you mean "malware"? 
      It's malicious software designed to harm your computer. Would you like me to 
      explain how to protect against it?
+     
+10. Per-User Persistent Memory
+This bot remembers each user's cybersecurity interests and discussed topics across sessions by saving them to a file unique to each username.
+•	How it works:
+•	When you start the bot, you are prompted to enter your name.
+•	The bot loads your preferences and discussed topics from a file named userprefs_{YourName}.txt (e.g., userprefs_Ntando.txt).
+•	If you are a new user,the bot starts fresh with no saved interests or topics.
+•	When you express interest in a topic (e.g., “I’m interested in privacy”), the bot saves it as your favorite topic.
+•	Each new topic you discuss is added to your personal discussed topics list.
+•	When you exit, your interests and discussed topics are saved to your personal file.
+•	The next time you use the bot and enter your name, your interests and topics are recalled
+
+ 
+•	What is saved:
+•	Your favorite topic (the last topic you expressed interest in).
+•	The list of all unique topics you have discussed with the bot.
+•	What is not saved:
+•	No other personal information is stored.
+•	Each user’s data is kept separate and private.
+Example: If you enter your name as Ntando, your preferences are saved in userprefs_Ntando.txt:
 
 Author
 Developed by: Ntando Nxumalo
