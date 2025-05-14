@@ -7,10 +7,10 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  package:
     strategy:
       matrix:
-        configuration: [Debug, Release]
+        configuration: [Release]  # Only package Release builds
     
     runs-on: windows-latest
 
@@ -37,17 +37,13 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
-    # Restore the application
+    # Restore dependencies only (no build)
     - name: Restore Dependencies
       run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
       env:
         Configuration: ${{ matrix.configuration }}
 
-    # Build the console application (for both Debug and Release)
-    - name: Build Console Application
-      run: msbuild $env:Solution_Name /p:Configuration=${{ matrix.configuration }}
-
-    # Create a zip package of the console app
+    # Package the existing build output
     - name: Package Console App
       run: |
         $outputDir = "bin\${{ matrix.configuration }}\Package"
@@ -59,19 +55,17 @@ jobs:
     - name: Upload Console App Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: CybersecurityBot_Console_${{ matrix.configuration }}
+        name: CybersecurityBot_Console
         path: bin\${{ matrix.configuration }}\CybersecurityBot.zip
 
-    # Windows Application Packaging (Release only)
+    # Windows Application Packaging (optional - remove if not needed)
     - name: Decode Signing Certificate
-      if: matrix.configuration == 'Release'
       run: |
         $pfx_cert_byte = [System.Convert]::FromBase64String("${{ secrets.Base64_Encoded_Pfx }}")
         $certificatePath = Join-Path -Path $env:Wap_Project_Directory -ChildPath CybersecurityBot.pfx
         [IO.File]::WriteAllBytes("$certificatePath", $pfx_cert_byte)
 
-    - name: Build and Package App
-      if: matrix.configuration == 'Release'
+    - name: Package MSIX
       run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=CybersecurityBot.pfx /p:PackageCertificatePassword=${{ secrets.Pfx_Key }}
       env:
         Appx_Bundle: Always
@@ -80,11 +74,9 @@ jobs:
         Configuration: ${{ matrix.configuration }}
 
     - name: Cleanup Signing Certificate
-      if: matrix.configuration == 'Release'
       run: Remove-Item -path $env:Wap_Project_Directory\CybersecurityBot.pfx
 
     - name: Upload MSIX Package
-      if: matrix.configuration == 'Release'
       uses: actions/upload-artifact@v4
       with:
         name: CybersecurityBot_MSIX_Package
