@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 class BotInteraction
 {
@@ -132,6 +133,64 @@ class BotInteraction
         }
     }
 
+    private static string GetUserPreferencesFile()
+    {
+        var safeName = string.Concat(username.Where(char.IsLetterOrDigit));
+        return $"userprefs_{safeName}.txt";
+    }
+
+    private static void SavePreferencesToFile()
+    {
+        if (string.IsNullOrWhiteSpace(username)) return;
+        try
+        {
+            using (var writer = new StreamWriter(GetUserPreferencesFile(), false))
+            {
+                if (userPreferences.ContainsKey("favoriteTopic"))
+                    writer.WriteLine($"favoriteTopic={userPreferences["favoriteTopic"]}");
+                if (discussedTopics.Count > 0)
+                    writer.WriteLine($"discussedTopics={string.Join(",", discussedTopics)}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"Failed to save preferences: {ex.Message}");
+            Console.ResetColor();
+        }
+    }
+
+    private static void LoadPreferencesFromFile()
+    {
+        userPreferences.Clear();
+        discussedTopics.Clear();
+        if (string.IsNullOrWhiteSpace(username)) return;
+        var file = GetUserPreferencesFile();
+        if (!File.Exists(file))
+            return;
+
+        try
+        {
+            foreach (var line in File.ReadAllLines(file))
+            {
+                var parts = line.Split(new[] { '=' }, 2);
+                if (parts.Length == 2)
+                {
+                    if (parts[0] == "favoriteTopic")
+                        userPreferences["favoriteTopic"] = parts[1];
+                    else if (parts[0] == "discussedTopics")
+                        discussedTopics.AddRange(parts[1].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"Failed to load preferences: {ex.Message}");
+            Console.ResetColor();
+        }
+    }
+
     private static void InitializeConversation()
     {
         Console.ForegroundColor = ConsoleColor.Green;
@@ -146,11 +205,26 @@ class BotInteraction
             Console.ResetColor();
             username = Console.ReadLine()?.Trim();
         }
-        userPreferences["name"] = username;
+
+        // Load this user's preferences
+        LoadPreferencesFromFile();
 
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine($"\nHello, {username}! Welcome to Cyber Security Bot.\n");
         Console.ResetColor();
+
+        if (userPreferences.ContainsKey("favoriteTopic"))
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"Last time, you were interested in: {userPreferences["favoriteTopic"]}");
+            Console.ResetColor();
+        }
+        if (discussedTopics.Count > 0)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"Previously discussed topics: {string.Join(", ", discussedTopics)}");
+            Console.ResetColor();
+        }
     }
 
     private static void MainConversationLoop()
@@ -209,7 +283,7 @@ class BotInteraction
             }
         }
     }
-    //Misspelling handling
+
     private static string CorrectMisspellings(string input)
     {
         foreach (var correction in spellingCorrections)
@@ -224,7 +298,7 @@ class BotInteraction
         }
         return input;
     }
-    //Prompt Display
+
     private static void DisplayPrompt()
     {
         Console.ForegroundColor = ConsoleColor.Green;
@@ -251,7 +325,7 @@ class BotInteraction
         Console.WriteLine();
         return input?.ToLower() ?? "";
     }
-    //Empty input handling
+
     private static void HandleEmptyInput()
     {
         Console.ForegroundColor = ConsoleColor.Yellow;
@@ -277,7 +351,7 @@ class BotInteraction
             HandleUnknownInput(input);
         }
     }
-    //Topic interest detection
+
     private static bool ProcessInterestStatement(string input)
     {
         var interestPhrases = new List<string>
@@ -345,13 +419,13 @@ class BotInteraction
 
         return false;
     }
-    //Recall Username
+
     private static void RecallUserName()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
-        if (userPreferences.ContainsKey("name") && !string.IsNullOrWhiteSpace(userPreferences["name"]))
+        if (!string.IsNullOrWhiteSpace(username))
         {
-            Console.WriteLine($"Your name is {userPreferences["name"]}.");
+            Console.WriteLine($"Your name is {username}.");
         }
         else
         {
@@ -464,7 +538,7 @@ class BotInteraction
         }
         Console.ResetColor();
     }
-    //Topics Display
+
     private static void DisplayPurpose()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
@@ -476,7 +550,7 @@ class BotInteraction
         Console.WriteLine("- General security best practices");
         Console.ResetColor();
     }
-    
+
     private static void DisplayAvailableTopics()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
@@ -489,7 +563,7 @@ class BotInteraction
         Console.WriteLine("- Malware (viruses, ransomware, protection)");
         Console.ResetColor();
     }
-    //Help Display
+
     private static void DisplayHelp()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
@@ -501,7 +575,7 @@ class BotInteraction
         Console.WriteLine("- Type 'exit' to end our conversation");
         Console.ResetColor();
     }
-    //User Preferences
+
     private static void RecallUserPreferences()
     {
         if (userPreferences.Count == 0)
@@ -530,7 +604,7 @@ class BotInteraction
             Console.ResetColor();
         }
     }
-    //Unknown input control
+
     private static void HandleUnknownInput(string input)
     {
         if (input.EndsWith("?") || input.StartsWith("what") || input.StartsWith("how") || input.StartsWith("why"))
@@ -551,7 +625,7 @@ class BotInteraction
         inConversation = false;
         currentTopic = "";
     }
-    //Key words control
+
     private static (string sentiment, string emotion) AnalyzeSentiment(string input)
     {
         string sentiment = "neutral";
@@ -577,7 +651,7 @@ class BotInteraction
 
         return (sentiment, emotion);
     }
-    //Exit control Message
+
     private static void DisplayExitMessage()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
@@ -603,8 +677,11 @@ class BotInteraction
         }
 
         Console.ResetColor();
+
+        // Save preferences to file
+        SavePreferencesToFile();
     }
-    //Error Handling
+
     private static void HandleError(Exception ex)
     {
         Console.ForegroundColor = ConsoleColor.Red;
@@ -615,6 +692,5 @@ class BotInteraction
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.WriteLine($"Error details: {ex.GetType().Name} in {ex.TargetSite?.DeclaringType?.Name}.{ex.TargetSite?.Name}");
         Console.ResetColor();
-    }//End of program
+    }
 }
-
