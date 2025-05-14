@@ -9,9 +9,10 @@ class BotInteraction
     private static bool inConversation = false;
     private static readonly Random random = new Random();
 
-    // User preferences and history
+    // User preference and history
     private static readonly Dictionary<string, string> userPreferences = new Dictionary<string, string>();
     private static readonly List<string> discussedTopics = new List<string>();
+    private static readonly Dictionary<string, List<int>> shownResponses = new Dictionary<string, List<int>>();
 
     private static readonly Dictionary<string, List<string>> responseLibrary = new Dictionary<string, List<string>>()
     {
@@ -71,33 +72,64 @@ class BotInteraction
         }
     };
 
-    // Keyword mapping to topics
+    private static readonly Dictionary<string, string> spellingCorrections = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        {"fishing", "phishing"},
+        {"phisihng", "phishing"},
+        {"phising", "phishing"},
+        {"passsword", "password"},
+        {"pasword", "password"},
+        {"scamm", "scam"},
+        {"privasy", "privacy"},
+        {"securty", "security"},
+        {"cybersec", "cyber security"}
+    };
+
     private static readonly Dictionary<string, string> keywordToTopic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         {"password", "passwords"},
         {"passwords", "passwords"},
         {"strong password", "passwords"},
+        {"login", "passwords"},
+        {"credentials", "passwords"},
         {"phishing", "phishing"},
         {"phish", "phishing"},
+        {"email scam", "phishing"},
         {"scam", "scams"},
         {"scams", "scams"},
         {"fraud", "scams"},
+        {"con", "scams"},
         {"privacy", "privacy"},
         {"private", "privacy"},
         {"data protection", "privacy"},
+        {"personal data", "privacy"},
         {"security", "security"},
         {"cyber", "security"},
-        {"safe browsing", "security"}
+        {"cybersecurity", "security"},
+        {"safe browsing", "security"},
+        {"hack", "security"},
+        {"malware", "security"},
+        {"virus", "security"}
     };
 
-    // Sentiment analysis words
-    private static readonly string[] positiveWords = { "great", "good", "awesome", "happy", "thanks", "thank you", "cool", "excellent", "love", "like" };
-    private static readonly string[] negativeWords = { "bad", "sad", "angry", "frustrated", "worried", "scared", "afraid", "hate", "annoyed" };
+    private static readonly string[] positiveWords = { "great", "good", "awesome", "happy", "thanks", "thank you", "cool", "excellent", "love", "like", "fantastic", "wonderful", "perfect" };
+    private static readonly string[] negativeWords = { "bad", "sad", "angry", "frustrated", "worried", "scared", "afraid", "hate", "annoyed", "terrible", "awful", "horrible", "stupid" };
 
     public static void Start()
     {
-        InitializeConversation();
-        MainConversationLoop();
+        try
+        {
+            InitializeConversation();
+            MainConversationLoop();
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"A critical error occurred: {ex.Message}");
+            Console.WriteLine("The program will now exit. Please try again later.");
+            Console.ResetColor();
+            Environment.Exit(1);
+        }
     }
 
     private static void InitializeConversation()
@@ -106,7 +138,16 @@ class BotInteraction
         Console.Write("Enter your name: ");
         Console.ResetColor();
 
-        username = Console.ReadLine();
+        username = Console.ReadLine()?.Trim();
+        while (string.IsNullOrWhiteSpace(username))
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("I didn't get your name. Please enter your name:");
+            Console.ResetColor();
+            username = Console.ReadLine()?.Trim();
+        }
+        userPreferences["name"] = username;
+
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine($"\nHello, {username}! Welcome to Cyber Security Bot.\n");
         Console.ResetColor();
@@ -133,7 +174,33 @@ class BotInteraction
                     break;
                 }
 
+                input = CorrectMisspellings(input);
+
                 var sentimentAnalysis = AnalyzeSentiment(input);
+
+                // Handle context-aware follow-ups
+                if (input.Contains("what should i know") || input.Contains("what else should i know"))
+                {
+                    if (!string.IsNullOrEmpty(currentTopic))
+                    {
+                        DisplayRandomResponse(currentTopic, sentimentAnalysis, true);
+                        continue;
+                    }
+                    else if (userPreferences.ContainsKey("favoriteTopic"))
+                    {
+                        currentTopic = userPreferences["favoriteTopic"];
+                        DisplayRandomResponse(currentTopic, sentimentAnalysis, true);
+                        continue;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("What topic would you like to know more about?");
+                        Console.ResetColor();
+                        continue;
+                    }
+                }
+
                 ProcessInput(input, sentimentAnalysis);
             }
             catch (Exception ex)
@@ -142,7 +209,22 @@ class BotInteraction
             }
         }
     }
-
+    //Misspelling handling
+    private static string CorrectMisspellings(string input)
+    {
+        foreach (var correction in spellingCorrections)
+        {
+            if (input.Contains(correction.Key))
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"Did you mean '{correction.Value}' instead of '{correction.Key}'?");
+                Console.ResetColor();
+                input = input.Replace(correction.Key, correction.Value);
+            }
+        }
+        return input;
+    }
+    //Prompt Display
     private static void DisplayPrompt()
     {
         Console.ForegroundColor = ConsoleColor.Green;
@@ -169,7 +251,7 @@ class BotInteraction
         Console.WriteLine();
         return input?.ToLower() ?? "";
     }
-
+    //Empty input handling
     private static void HandleEmptyInput()
     {
         Console.ForegroundColor = ConsoleColor.Yellow;
@@ -188,21 +270,28 @@ class BotInteraction
             currentTopic = detectedTopic;
             inConversation = true;
             if (!discussedTopics.Contains(currentTopic)) discussedTopics.Add(currentTopic);
-            DisplayRandomResponse(currentTopic, sentimentAnalysis);
+            DisplayRandomResponse(currentTopic, sentimentAnalysis, false);
         }
         else
         {
-            HandleUnknownInput();
+            HandleUnknownInput(input);
         }
     }
-
+    //Topic interest detection
     private static bool ProcessInterestStatement(string input)
     {
-        if (!input.Contains("i'm interested in") &&
-            !input.Contains("i am interested in") &&
-            !input.Contains("i like") &&
-            !input.Contains("i love") &&
-            !input.Contains("i enjoy"))
+        var interestPhrases = new List<string>
+        {
+            "i'm interested in",
+            "i am interested in",
+            "i like",
+            "i love",
+            "i enjoy",
+            "i want to know about",
+            "tell me about"
+        };
+
+        if (!interestPhrases.Any(phrase => input.Contains(phrase)))
         {
             return false;
         }
@@ -212,38 +301,63 @@ class BotInteraction
         {
             userPreferences["favoriteTopic"] = detectedTopic;
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"Great! I'll remember that you're interested in {detectedTopic}. It's a crucial part of staying safe online.");
+            Console.WriteLine($"Great! I'll remember that you're interested in {detectedTopic}.");
             Console.ResetColor();
             currentTopic = detectedTopic;
             inConversation = true;
+            DisplayRandomResponse(currentTopic, ("neutral", ""), false);
+            return true;
         }
 
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("That sounds interesting! Could you tell me more about which cybersecurity topic you're interested in?");
-            Console.ResetColor();
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("That sounds interesting! Could you tell me more about which cybersecurity topic you're interested in?");
+        Console.ResetColor();
         return true;
     }
 
     private static bool ProcessSpecialCommands(string input)
     {
-        if (input.Contains("how are you"))
+        var commands = new Dictionary<string, Action>
         {
-            RespondToHowAreYou(AnalyzeSentiment(input));
-            return true;
-        }
-        if (input.Contains("what's your purpose") || input.Contains("what is your purpose"))
+            { "how are you", () => RespondToHowAreYou(AnalyzeSentiment(input)) },
+            { "what's your purpose", () => DisplayPurpose() },
+            { "what is your purpose", () => DisplayPurpose() },
+            { "what can i ask you about", () => DisplayAvailableTopics() },
+            { "more", () => DisplayRandomResponse(currentTopic, AnalyzeSentiment(input), true) },
+            { "another tip", () => DisplayRandomResponse(currentTopic, AnalyzeSentiment(input), true) },
+            { "tell me more", () => DisplayRandomResponse(currentTopic, AnalyzeSentiment(input), true) },
+            { "remember", () => RecallUserPreferences() },
+            { "recall", () => RecallUserPreferences() },
+            { "help", () => DisplayHelp() },
+            { "topics", () => DisplayAvailableTopics() },
+            { "what is my name", () => RecallUserName() },
+            { "what's my name", () => RecallUserName() }
+        };
+
+        foreach (var command in commands)
         {
-            DisplayPurpose();
-            return true;
+            if (input.Contains(command.Key))
+            {
+                command.Value();
+                return true;
+            }
         }
-        if (input.Contains("what can i ask you about") || input.Contains("what can I ask you about"))
-        {
-            DisplayAvailableTopics();
-            return true;
-        }
-        }
-        }
+
         return false;
+    }
+    //Recall Username
+    private static void RecallUserName()
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        if (userPreferences.ContainsKey("name") && !string.IsNullOrWhiteSpace(userPreferences["name"]))
+        {
+            Console.WriteLine($"Your name is {userPreferences["name"]}.");
+        }
+        else
+        {
+            Console.WriteLine("I don't seem to have your name saved. Please tell me your name!");
+        }
+        Console.ResetColor();
     }
 
     private static string DetectTopic(string input)
@@ -258,15 +372,42 @@ class BotInteraction
         return null;
     }
 
-    private static void DisplayRandomResponse(string topic, (string sentiment, string emotion) sentimentAnalysis)
+    // Enhanced: Avoid repeating the same response until all have been shown
+    private static void DisplayRandomResponse(string topic, (string sentiment, string emotion) sentimentAnalysis, bool isFollowUp)
     {
-        if (!responseLibrary.ContainsKey(topic) || responseLibrary[topic].Count == 0) return;
+        if (string.IsNullOrEmpty(topic) || !responseLibrary.ContainsKey(topic) || responseLibrary[topic].Count == 0)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("I seem to be missing information on that topic. Let's try something else.");
+            Console.ResetColor();
+            return;
+        }
 
-        string response = responseLibrary[topic][random.Next(responseLibrary[topic].Count)];
+        if (!shownResponses.ContainsKey(topic))
+            shownResponses[topic] = new List<int>();
+
+        var availableIndexes = Enumerable.Range(0, responseLibrary[topic].Count).Except(shownResponses[topic]).ToList();
+        if (availableIndexes.Count == 0)
+        {
+            shownResponses[topic].Clear();
+            availableIndexes = Enumerable.Range(0, responseLibrary[topic].Count).ToList();
+        }
+
+        int responseIndex = availableIndexes[random.Next(availableIndexes.Count)];
+        shownResponses[topic].Add(responseIndex);
+
+        string response = responseLibrary[topic][responseIndex];
         response = AdjustResponseBySentiment(response, sentimentAnalysis);
 
         Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine(response);
+        if (isFollowUp)
+        {
+            Console.WriteLine($"About {topic}, here's another tip: {response}");
+        }
+        else
+        {
+            Console.WriteLine(response);
+        }
         Console.ResetColor();
         Console.WriteLine();
     }
@@ -281,7 +422,7 @@ class BotInteraction
         {
             if (sentimentAnalysis.emotion == "worried")
             {
-                response = "I understand this can be worrying. " + response + " The important thing is to take it step by step.";
+                response = "I understand this can be worrying. " + response + " Remember, you're taking the right step by learning about this.";
             }
             else if (sentimentAnalysis.emotion == "frustrated")
             {
@@ -323,49 +464,53 @@ class BotInteraction
         }
         Console.ResetColor();
     }
-
+    //Topics Display
     private static void DisplayPurpose()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine("My purpose is to assist you with cybersecurity knowledge and keep you safe online. I can help with topics like password safety, phishing prevention, scam awareness, privacy protection, and general security tips.");
+        Console.WriteLine("My purpose is to assist you with cybersecurity knowledge and keep you safe online. I can help with:");
+        Console.WriteLine("- Password safety and management");
+        Console.WriteLine("- Recognizing and preventing phishing attempts");
+        Console.WriteLine("- Identifying and avoiding scams");
+        Console.WriteLine("- Protecting your privacy online");
+        Console.WriteLine("- General security best practices");
         Console.ResetColor();
     }
-
+    
     private static void DisplayAvailableTopics()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine("You can ask me about:\n- Password safety\n- Phishing prevention\n- Scam awareness\n- Privacy protection\n- General security tips\n- Safe browsing practices");
+        Console.WriteLine("You can ask me about these cybersecurity topics:");
+        Console.WriteLine("- Passwords (creating strong passwords, password managers)");
+        Console.WriteLine("- Phishing (recognizing scam emails, protecting yourself)");
+        Console.WriteLine("- Scams (common online scams, how to avoid them)");
+        Console.WriteLine("- Privacy (protecting your personal information online)");
+        Console.WriteLine("- Security (general cybersecurity best practices)");
+        Console.WriteLine("- Malware (viruses, ransomware, protection)");
         Console.ResetColor();
     }
-
-    private static void HandleMoreRequest((string sentiment, string emotion) sentimentAnalysis)
+    //Help Display
+    private static void DisplayHelp()
     {
-        if (!string.IsNullOrEmpty(currentTopic))
-        {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-
-            if (userPreferences.ContainsKey("favoriteTopic") && userPreferences["favoriteTopic"] == currentTopic)
-            {
-                Console.WriteLine($"Here's another tip about {currentTopic}, since you're particularly interested in this:");
-            }
-            else if (discussedTopics.Count > 1)
-            {
-                Console.WriteLine($"We've discussed {string.Join(" and ", discussedTopics)} so far. Here's more about {currentTopic}:");
-            }
-            else
-            {
-                Console.WriteLine($"Here's another tip about {currentTopic}:");
-            }
-
-            Console.ResetColor();
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("I can help you with cybersecurity information. Here's how to interact with me:");
+        Console.WriteLine("- Ask about specific topics (e.g., 'tell me about phishing')");
+        Console.WriteLine("- Say 'more' or 'what else should I know' to get additional information on the current topic");
+        Console.WriteLine("- Say 'remember' to recall your preferences");
+        Console.WriteLine("- Express your feelings and I'll adapt my responses");
+        Console.WriteLine("- Type 'exit' to end our conversation");
+        Console.ResetColor();
     }
-
+    //User Preferences
     private static void RecallUserPreferences()
     {
         if (userPreferences.Count == 0)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("I don't have any preferences saved for you yet. You can tell me things like 'I'm interested in privacy' and I'll remember them.");
+            Console.WriteLine("I don't have any preferences saved for you yet. You can tell me things like:");
+            Console.WriteLine("- 'I'm interested in privacy'");
+            Console.WriteLine("- 'I love learning about passwords'");
+            Console.WriteLine("- 'Remember that I use a password manager'");
             Console.ResetColor();
             return;
         }
@@ -374,7 +519,7 @@ class BotInteraction
         Console.WriteLine("Here's what I remember about you:");
         foreach (var pref in userPreferences)
         {
-            Console.WriteLine($"- {pref.Key}: {pref.Value}");
+            Console.WriteLine($"- {pref.Key.Replace("favorite", "favorite ")}: {pref.Value}");
         }
         Console.ResetColor();
 
@@ -385,17 +530,28 @@ class BotInteraction
             Console.ResetColor();
         }
     }
-
-    private static void HandleUnknownInput()
+    //Unknown input control
+    private static void HandleUnknownInput(string input)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine("I didn't quite understand that. Could you rephrase or ask about a cybersecurity topic?");
-        Console.WriteLine("Try asking about: passwords, phishing, scams, privacy, or general security.");
-        Console.ResetColor();
+        if (input.EndsWith("?") || input.StartsWith("what") || input.StartsWith("how") || input.StartsWith("why"))
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("I'm not sure I understand your question. Could you try rephrasing it or ask about a specific cybersecurity topic?");
+            Console.ResetColor();
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("I didn't quite understand that. Could you rephrase or ask about a cybersecurity topic?");
+            Console.WriteLine("Try asking about: passwords, phishing, scams, privacy, or general security.");
+            Console.WriteLine("Or type 'help' for assistance.");
+            Console.ResetColor();
+        }
+
         inConversation = false;
         currentTopic = "";
     }
-
+    //Key words control
     private static (string sentiment, string emotion) AnalyzeSentiment(string input)
     {
         string sentiment = "neutral";
@@ -421,7 +577,7 @@ class BotInteraction
 
         return (sentiment, emotion);
     }
-
+    //Exit control Message
     private static void DisplayExitMessage()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
@@ -435,16 +591,30 @@ class BotInteraction
         if (discussedTopics.Count > 0)
         {
             Console.WriteLine($"We discussed these topics today: {string.Join(", ", discussedTopics)}.");
+            Console.WriteLine("Here's a quick summary of what we covered:");
+
+            foreach (var topic in discussedTopics)
+            {
+                if (responseLibrary.ContainsKey(topic) && responseLibrary[topic].Count > 0)
+                {
+                    Console.WriteLine($"- {topic}: {responseLibrary[topic][0]}");
+                }
+            }
         }
 
         Console.ResetColor();
     }
-
+    //Error Handling
     private static void HandleError(Exception ex)
     {
         Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine($"Oops! Something went wrong: {ex.Message}");
-        Console.WriteLine("Let's try that again.");
+        Console.WriteLine("Let's try that again. If the problem persists, you may need to restart the conversation.");
         Console.ResetColor();
-    }
+
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"Error details: {ex.GetType().Name} in {ex.TargetSite?.DeclaringType?.Name}.{ex.TargetSite?.Name}");
+        Console.ResetColor();
+    }//End of program
 }
+
