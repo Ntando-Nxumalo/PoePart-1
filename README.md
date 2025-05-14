@@ -1,62 +1,161 @@
-# README:
- Project name:ST10456704_CyberSecurityBot P1
- NetFrame:4.0.8
-Template:Console App C# .NET Framework 4.0.8
+README: ST10456704_CyberSecurityBot P1 & P2
+Project Overview
+Project Name: ST10456704_CyberSecurityBot
+Framework: .NET Framework 4.0.8
+Template: Console App C#
 
-## User guide
-1. **Audio Greeting**
-   - Plays a welcome audio file (`Greetings.wav`) upon startup.
-   - If the file is missing, an error message is displayed.
-   - The system automatically detects the correct file location.
-   - Alternatively, users can manually update the path (e.g., `c://users/Rc_student/repos/source/Greetings.wav`).
+Part 1 Features
+1. Audio Greeting
+Plays a welcome audio file (Greetings.wav) upon startup
 
-2. **ASCII Logo Display**
-   - Displays an ASCII representation of a cybersecurity logo using an image (`CyberSafetyBot.bmp`).
-   - If the image is missing, an error message is shown.
-   - Users can replace the image path if necessary.
+Automatic file location detection
 
-3. **Text Greeting**
-   - Displays: `Welcome to Cyber Security bot `
+Error handling for missing files
 
-4. **User Personalization**
-   - Prompts the user to enter a name.
-   - The AI refers to the user by their name throughout the interaction.
-   - Example:
-     Hello, Ntando! Welcome to Cyber Security Bot.
+Manual path configuration option (e.g., c://users/Rc_student/repos/source/Greetings.wav)
 
-    What would you like to ask me?
-    Type 'exit' to quit.
-      
-     Ntando:> Tell me about passwords.
-     AI:> Passwords need to be protected at all times.
-     ```
+2. ASCII Logo Display
+Converts CyberSafetyBot.bmp to ASCII art
 
-5. **Cybersecurity Topics & Responses**
-   - The AI is designed to answer cybersecurity-related queries.
-   - Topics include:
-     - Password security
-     - Phishing
-     - Online Security
-     - More
-     - General cybersecurity best practices
-   - Users can ask questions in full sentences or just enter a keyword (e.g., "Phishing").
+Graceful error handling for missing images
 
-6. **Error Handling**
-   - If a user asks a question outside the AI's scope, it will notify them that it only provides cybersecurity-related information.
-   - If the user leaves the question field empty, an error message is displayed.
+Customizable image path
 
-7. **Exit Commands**
-   - Users can exit the application by typing:
-     - `exit`
+3. User Interaction
+text
+Welcome to Cyber Security bot
 
-and added a screenshot of my file structure and code
----
+Please enter your name: Ntando
+Hello, Ntando! Welcome to Cyber Security Bot.
 
-## Author
-Developed by Ntando Nxumalo
-ST10456704
+What would you like to ask me?
+Type 'exit' to quit.
 
----
+Ntando:> Tell me about passwords.
+AI:> Passwords need to be protected at all times.
+4. Cybersecurity Topics
+Password security
 
+Phishing
+
+Online Security
+
+General best practices
+
+5. Error Handling
+Handles non-cybersecurity questions
+
+Validates empty inputs
+
+6. Exit Command
+Type exit to quit the application
+
+Part 2 Enhancements
+1. Dynamic Keyword Recognition
+Recognizes cybersecurity keywords:
+
+Password safety tips
+
+Phishing detection
+
+Privacy protection
+
+Malware prevention
+
+Example:
+
+User: How can I improve my password security?
+Bot: Consider using a password manager to generate and store complex passwords securely.
+2. Random Response Selection
+Multiple response variations for each topic
+
+Randomized selection for more natural conversations
+
+3. Conversation Memory
+Remembers user preferences and interests
+
+Personalizes subsequent responses
+
+Example:
+
+User: I'm interested in privacy
+Bot: I'll remember you're interested in privacy. Here's a tip: Regularly review your social media privacy settings.
+4. Sentiment Detection
+Adjusts tone based on user emotions:
+
+Worried → More reassuring
+
+Frustrated → More patient
+
+Curious → More detailed
+
+Example:
+
+User: I'm worried about online scams
+Bot: I understand this can be concerning. Let me share some tips to help you stay safe...
+5. Enhanced Error Handling
+Graceful handling of unrecognized inputs
+
+Context-aware suggestions
+
+No crashes on unexpected inputs
+
+6. Optimized Code Structure
+Dictionary-based keyword storage
+
+Modular response handling
+
+Efficient data structures
+
+7. Smart Name Recognition & Correction
+Personalized Interaction: The bot remembers your name throughout the session
+
+Typo Correction: Automatically fixes common cybersecurity term misspellings
+
+Examples:
+
+Name Recognition:
+
+Please enter your name: Ntando
+Hello, Ntando! I'm your Cybersecurity Assistant.
+
+Ntando:> What's your name?
+Bot: You can call me CyberGuard, Ntando!
+Term Correction:
+
+Ntando:> Tell me about fishing attacks
+Bot: I think you meant "phishing" attacks. These are fraudulent attempts to obtain sensitive information by disguising as trustworthy entities.
+Contextual Memory:
+
+Ntando:> I'm interested in pasword safety
+Bot: I'll remember your interest in password safety, Ntando. Did you mean "password" safety? Here's what you should know...
+8. Advanced Text Processing Features
+Spell Check: Corrects common cybersecurity term misspellings:
+
+fishing → phishing
+
+pasword → password
+
+maleware → malware
+
+ransomeware → ransomware
+
+Natural Language Understanding: Recognizes questions even with minor typos
+
+9. Personalized Learning
+The bot learns your frequent topics of interest
+
+Provides tailored suggestions based on your conversation history
+
+Example Interaction:
+
+Ntando:> I keep hearing about maleware
+Bot: I notice you often ask about security threats, Ntando. Did you mean "malware"? 
+     It's malicious software designed to harm your computer. Would you like me to 
+     explain how to protect against it?
+
+Author
+Developed by: Ntando Nxumalo
+Student Number: ST10456704
 
 
